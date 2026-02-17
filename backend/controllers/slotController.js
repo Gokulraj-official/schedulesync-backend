@@ -42,6 +42,15 @@ exports.createSlot = async (req, res) => {
 
     const populatedSlot = await Slot.findById(slot._id).populate('faculty', 'name email department profilePhoto');
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('slot_updated', {
+        action: 'created',
+        slotId: populatedSlot._id.toString(),
+        facultyId: (populatedSlot.faculty?._id || populatedSlot.faculty).toString(),
+      });
+    }
+
     res.status(201).json({
       success: true,
       slot: populatedSlot
@@ -164,6 +173,15 @@ exports.updateSlot = async (req, res) => {
       { new: true, runValidators: true }
     ).populate('faculty', 'name email department profilePhoto');
 
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('slot_updated', {
+        action: 'updated',
+        slotId: slot._id.toString(),
+        facultyId: (slot.faculty?._id || slot.faculty).toString(),
+      });
+    }
+
     res.status(200).json({
       success: true,
       slot
@@ -198,10 +216,29 @@ exports.cancelSlot = async (req, res) => {
     slot.isAvailable = false;
     await slot.save();
 
+    const affectedBookings = await Booking.find({
+      slot: slot._id,
+      status: { $in: ['pending', 'approved'] }
+    }).select('_id student faculty status');
+
     await Booking.updateMany(
-      { slot: slot._id, status: 'pending' },
+      { _id: { $in: affectedBookings.map((b) => b._id) } },
       { status: 'cancelled', cancellationReason: 'Slot cancelled by faculty', cancelledAt: new Date() }
     );
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('slot_updated', {
+        action: 'cancelled',
+        slotId: slot._id.toString(),
+        facultyId: slot.faculty.toString(),
+      });
+
+      affectedBookings.forEach((b) => {
+        io.to(b.student.toString()).emit('booking_updated', { bookingId: b._id, status: 'cancelled' });
+        io.to(b.faculty.toString()).emit('booking_updated', { bookingId: b._id, status: 'cancelled' });
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -247,6 +284,15 @@ exports.deleteSlot = async (req, res) => {
     }
 
     await Slot.findByIdAndDelete(req.params.id);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('slot_updated', {
+        action: 'deleted',
+        slotId: slot._id.toString(),
+        facultyId: slot.faculty.toString(),
+      });
+    }
 
     res.status(200).json({
       success: true,

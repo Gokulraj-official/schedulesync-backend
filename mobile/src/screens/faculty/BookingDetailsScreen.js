@@ -14,9 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
 
 const BookingDetailsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const { bookingId } = route.params;
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +29,20 @@ const BookingDetailsScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadBooking();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdated = (payload) => {
+      if (payload?.bookingId?.toString?.() !== bookingId?.toString?.()) return;
+      loadBooking();
+    };
+
+    socket.on('booking_updated', handleUpdated);
+    return () => {
+      socket.off('booking_updated', handleUpdated);
+    };
+  }, [socket, bookingId]);
 
   const loadBooking = async () => {
     try {
@@ -207,6 +223,14 @@ const BookingDetailsScreen = ({ navigation, route }) => {
           </Text>
         </View>
       )}
+
+      <TouchableOpacity
+        style={[styles.chatButton, { backgroundColor: colors.primary }]}
+        onPress={() => navigation.navigate('BookingChat', { bookingId })}
+      >
+        <Ionicons name="chatbubbles-outline" size={24} color="#ffffff" />
+        <Text style={styles.chatButtonText}>Open Chat</Text>
+      </TouchableOpacity>
 
       {booking.status === 'pending' && (
         <View style={styles.actionsContainer}>
@@ -437,7 +461,22 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     gap: 8,
   },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 15,
+    marginTop: 5,
+    padding: 15,
+    borderRadius: 10,
+    gap: 8,
+  },
   cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  chatButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',

@@ -4,9 +4,11 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { LogBox } from 'react-native';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { SocketProvider } from './src/context/SocketContext';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import FacultyNavigator from './src/navigation/FacultyNavigator';
 import StudentNavigator from './src/navigation/StudentNavigator';
+import AdminNavigator from './src/navigation/AdminNavigator';
 import SplashScreen from './src/screens/SplashScreen';
 
 LogBox.ignoreLogs(['Non-serializable values were found in the navigation state']);
@@ -27,6 +29,7 @@ function AppNavigator() {
         Auth: 'auth',
         Faculty: 'faculty',
         Student: 'student',
+        Admin: 'admin',
       },
     },
   };
@@ -51,6 +54,8 @@ function AppNavigator() {
             component={AuthNavigator}
             options={{ animationTypeForReplace: !token ? 'pop' : 'push' }}
           />
+        ) : user?.role === 'admin' ? (
+          <Stack.Screen name="Admin" component={AdminNavigator} />
         ) : user?.role === 'faculty' ? (
           <Stack.Screen name="Faculty" component={FacultyNavigator} />
         ) : (
@@ -65,7 +70,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppNavigator />
+        <SocketProvider>
+          <AppNavigator />
+        </SocketProvider>
       </AuthProvider>
     </ThemeProvider>
   );

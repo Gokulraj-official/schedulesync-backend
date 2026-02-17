@@ -23,7 +23,7 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'cancelled'],
+    enum: ['pending', 'approved', 'rejected', 'cancelled', 'completed', 'no-show'],
     default: 'pending'
   },
   rejectionReason: {
@@ -43,6 +43,32 @@ const bookingSchema = new mongoose.Schema({
   cancelledAt: {
     type: Date
   },
+  // Attendance tracking
+  attendance: {
+    status: {
+      type: String,
+      enum: ['pending', 'checked-in', 'attended', 'no-show', 'rescheduled'],
+      default: 'pending'
+    },
+    checkedInAt: Date,
+    markedAt: Date,
+    markedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    notes: String
+  },
+  // Waitlist support
+  isWaitlisted: {
+    type: Boolean,
+    default: false
+  },
+  waitlistPosition: Number,
+  promotedFromWaitlist: {
+    type: Boolean,
+    default: false
+  },
+  promotedAt: Date,
   createdAt: {
     type: Date,
     default: Date.now

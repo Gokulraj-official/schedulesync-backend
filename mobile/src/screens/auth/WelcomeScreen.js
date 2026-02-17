@@ -9,8 +9,9 @@ const WelcomeScreen = ({ navigation }) => {
   return (
     <LinearGradient colors={[colors.primary, colors.secondary]} style={styles.container}>
       <View style={styles.content}>
+        <Image source={require('../../../assets/brand-logo.png')} style={styles.logo} resizeMode="contain" />
         <Text style={styles.title}>Welcome to</Text>
-        <Text style={styles.appName}>SchedulSync</Text>
+        <Text style={styles.appName}>ScheduleSync</Text>
         <Text style={styles.description}>
           Smart Faculty-Student Appointment Scheduling
         </Text>
@@ -41,6 +42,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  logo: {
+    width: 140,
+    height: 140,
+    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 18,
+    padding: 10,
   },
   title: {
     fontSize: 24,

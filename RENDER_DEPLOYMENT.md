@@ -95,8 +95,8 @@ Add these variables:
 | Key | Value |
 |-----|-------|
 | `NODE_ENV` | `production` |
-| `MONGODB_URI` | `mongodb+srv://smartyjames_db_user:smarty123@cluster0.to6wnsx.mongodb.net/schedulesync?retryWrites=true&w=majority&appName=Cluster0` |
-| `JWT_SECRET` | `schedulesync_super_secret_jwt_key_2024_change_in_production` |
+| `MONGODB_URI` | `mongodb+srv://<username>:<password>@<cluster-host>/<database>?retryWrites=true&w=majority` |
+| `JWT_SECRET` | `<generate_a_strong_secret_and_store_only_in_render_env>` |
 | `JWT_EXPIRE` | `7d` |
 | `PORT` | `5000` |
 
@@ -104,7 +104,7 @@ Add these variables:
 
 1. Click **"Create Web Service"**
 2. Wait 5-10 minutes for deployment
-3. You'll get a URL like: `https://schedulesync-api.onrender.com`
+3. You'll get a URL like: `https://schedulesync-backend.onrender.com`
 
 ---
 
@@ -113,7 +113,7 @@ Add these variables:
 Once deployed, test it:
 
 ```
-https://schedulesync-api.onrender.com
+https://schedulesync-backend.onrender.com
 ```
 
 You should see:
@@ -134,10 +134,10 @@ You should see:
 Edit `mobile/src/config/api.js`:
 
 ```javascript
-const API_URL = 'https://schedulesync-api.onrender.com/api';
+const API_URL = 'https://schedulesync-backend.onrender.com/api';
 ```
 
-Replace `schedulesync-api` with your actual Render service name.
+Replace `schedulesync-backend` with your actual Render service name.
 
 ### 4.2 Commit Changes
 
@@ -210,6 +210,6 @@ If you encounter issues:
 
 ---
 
-**Your Render Backend URL**: `https://schedulesync-api.onrender.com`
+**Your Render Backend URL**: `https://schedulesync-backend.onrender.com`
 
 (Replace with your actual URL after deployment)

@@ -13,9 +13,11 @@ import { useTheme } from '../../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
 
-const SlotManagementScreen = ({ navigation }) => {
+const SlotManagementScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const [slots, setSlots] = useState([]);
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
@@ -30,11 +32,44 @@ const SlotManagementScreen = ({ navigation }) => {
     }, [filter])
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      if (route?.params?.openCreate) {
+        navigation.setParams({ openCreate: false });
+        navigation.navigate('CreateSlot');
+      }
+    }, [route?.params?.openCreate, navigation])
+  );
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleSlotUpdated = () => {
+      loadSlots();
+    };
+
+    socket.on('slot_updated', handleSlotUpdated);
+
+    return () => {
+      socket.off('slot_updated', handleSlotUpdated);
+    };
+  }, [socket, filter]);
+
   const loadSlots = async () => {
     try {
       const params = filter !== 'all' ? `?status=${filter}` : '';
       const response = await api.get(`/slots/my-slots${params}`);
-      setSlots(response.data.slots || []);
+      const raw = response.data.slots || [];
+      const sorted = [...raw].sort((a, b) => {
+        const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : null;
+        const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : null;
+        if (aCreated && bCreated && aCreated !== bCreated) return bCreated - aCreated;
+
+        const aStart = a.startTime ? new Date(a.startTime).getTime() : 0;
+        const bStart = b.startTime ? new Date(b.startTime).getTime() : 0;
+        return bStart - aStart;
+      });
+      setSlots(sorted);
     } catch (error) {
       console.error('Error loading slots:', error);
     }

@@ -110,7 +110,7 @@ const CreateSlotScreen = ({ navigation }) => {
       });
 
       Alert.alert('Success', 'Slot created successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        { text: 'OK', onPress: () => navigation.navigate('SlotManagement') },
       ]);
     } catch (error) {
       Alert.alert('Error', error.response?.data?.message || 'Failed to create slot');

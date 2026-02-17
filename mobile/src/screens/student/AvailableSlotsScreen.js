@@ -11,9 +11,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
 
 const AvailableSlotsScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const { facultyId } = route.params;
   const [slots, setSlots] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -21,6 +23,20 @@ const AvailableSlotsScreen = ({ navigation, route }) => {
   useEffect(() => {
     loadSlots();
   }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleSlotUpdated = (payload) => {
+      if (payload?.facultyId?.toString?.() !== facultyId?.toString?.()) return;
+      loadSlots();
+    };
+
+    socket.on('slot_updated', handleSlotUpdated);
+    return () => {
+      socket.off('slot_updated', handleSlotUpdated);
+    };
+  }, [socket, facultyId]);
 
   const loadSlots = async () => {
     try {

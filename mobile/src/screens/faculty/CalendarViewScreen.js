@@ -5,9 +5,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 
 const CalendarViewScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
+  const { user } = useAuth();
+  const myId = user?.id || user?._id;
   const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
   const [slots, setSlots] = useState([]);
   const [markedDates, setMarkedDates] = useState({});
@@ -19,6 +24,21 @@ const CalendarViewScreen = ({ navigation }) => {
   useEffect(() => {
     loadDaySlots();
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (!socket || !myId) return;
+
+    const handleSlotUpdated = (payload) => {
+      if (payload?.facultyId?.toString?.() !== myId?.toString?.()) return;
+      loadMonthSlots();
+      loadDaySlots();
+    };
+
+    socket.on('slot_updated', handleSlotUpdated);
+    return () => {
+      socket.off('slot_updated', handleSlotUpdated);
+    };
+  }, [socket, myId, selectedDate]);
 
   const loadMonthSlots = async () => {
     try {

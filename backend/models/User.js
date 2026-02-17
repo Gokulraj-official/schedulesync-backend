@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['faculty', 'student'],
+    enum: ['faculty', 'student', 'admin'],
     required: [true, 'Please specify role']
   },
   department: {
@@ -62,6 +62,24 @@ const userSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
+  // Push notification support
+  pushToken: {
+    type: String
+  },
+  notificationsEnabled: {
+    type: Boolean,
+    default: true
+  },
+  // Admin/verification
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  verifiedAt: Date,
   createdAt: {
     type: Date,
     default: Date.now

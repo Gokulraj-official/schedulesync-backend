@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -12,6 +12,7 @@ const RoleSelectionScreen = ({ navigation }) => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Image source={require('../../../assets/brand-logo.png')} style={styles.logo} resizeMode="contain" />
       <Text style={[styles.title, { color: colors.text }]}>I am a...</Text>
 
       <TouchableOpacity
@@ -48,6 +49,12 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     justifyContent: 'center',
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,

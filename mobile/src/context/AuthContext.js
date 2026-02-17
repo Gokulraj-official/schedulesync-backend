@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../config/api';
+import { registerForPushNotificationsAsync } from '../utils/notifications';
 
 const AuthContext = createContext();
 
@@ -10,6 +11,18 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const syncPushToken = async () => {
+    try {
+      const pushToken = await registerForPushNotificationsAsync();
+      if (!pushToken) return;
+
+      await api.put('/users/push-token', { pushToken });
+      await AsyncStorage.setItem('pushToken', pushToken);
+    } catch (e) {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     loadUser();
@@ -43,6 +56,8 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
 
+      syncPushToken();
+
       return { success: true };
     } catch (error) {
       return {
@@ -70,6 +85,8 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
 
+      syncPushToken();
+
       return { success: true };
     } catch (error) {
       return {
@@ -85,7 +102,7 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      await AsyncStorage.multiRemove(['userToken', 'userData', 'userRole']);
+      await AsyncStorage.multiRemove(['userToken', 'userData', 'userRole', 'pushToken']);
       setToken(null);
       setUser(null);
     }

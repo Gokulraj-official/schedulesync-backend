@@ -145,6 +145,15 @@ const FacultyProfileScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={[styles.actionItem, { borderColor: colors.border }]}
+            onPress={() => navigation.navigate('ChangePassword')}
+          >
+            <Ionicons name="key-outline" size={24} color={colors.info} />
+            <Text style={[styles.actionText, { color: colors.text }]}>Change Password</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionItem, { borderColor: colors.border }]}
             onPress={generatePublicLink}
           >
             <Ionicons name="share-outline" size={24} color={colors.secondary} />

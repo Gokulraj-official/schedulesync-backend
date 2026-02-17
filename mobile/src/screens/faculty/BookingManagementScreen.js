@@ -13,9 +13,11 @@ import { useTheme } from '../../context/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
 
 const BookingManagementScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const [bookings, setBookings] = useState([]);
   const [filter, setFilter] = useState('pending');
   const [refreshing, setRefreshing] = useState(false);
@@ -30,7 +32,7 @@ const BookingManagementScreen = ({ navigation }) => {
     }, [filter])
   );
 
-  const loadBookings = async () => {
+  const loadBookings = React.useCallback(async () => {
     try {
       const params = filter !== 'all' ? `?status=${filter}` : '';
       const response = await api.get(`/bookings/faculty-bookings${params}`);
@@ -38,7 +40,27 @@ const BookingManagementScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error loading bookings:', error);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdated = () => {
+      loadBookings();
+    };
+
+    const handleCreated = () => {
+      loadBookings();
+    };
+
+    socket.on('booking_updated', handleUpdated);
+    socket.on('booking_created', handleCreated);
+
+    return () => {
+      socket.off('booking_updated', handleUpdated);
+      socket.off('booking_created', handleCreated);
+    };
+  }, [socket, loadBookings]);
 
   const onRefresh = async () => {
     setRefreshing(true);

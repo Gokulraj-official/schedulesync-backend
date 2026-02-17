@@ -1,6 +1,107 @@
 const User = require('../models/User');
 const Slot = require('../models/Slot');
 const Booking = require('../models/Booking');
+const Notification = require('../models/Notification');
+
+exports.updatePushToken = async (req, res) => {
+  try {
+    const { pushToken, notificationsEnabled } = req.body;
+
+    const update = {};
+    if (pushToken) update.pushToken = pushToken;
+    if (notificationsEnabled !== undefined) update.notificationsEnabled = notificationsEnabled;
+
+    const user = await User.findByIdAndUpdate(req.user._id, update, { new: true });
+
+    res.status(200).json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getChatContacts = async (req, res) => {
+  try {
+    const { role, q, limit } = req.query;
+    const lim = Math.min(Math.max(parseInt(limit || '100', 10), 1), 300);
+
+    const query = {
+      _id: { $ne: req.user._id },
+      role: { $in: ['student', 'faculty'] }
+    };
+
+    if (role && (role === 'student' || role === 'faculty')) {
+      query.role = role;
+    }
+
+    if (q && String(q).trim().length) {
+      query.name = { $regex: String(q).trim(), $options: 'i' };
+    }
+
+    const users = await User.find(query)
+      .select('name profilePhoto role department isOnline lastSeen')
+      .sort({ name: 1 })
+      .limit(lim);
+
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide currentPassword and newPassword'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters'
+      });
+    }
+
+    const user = await User.findById(req.user._id).select('+password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const ok = await user.comparePassword(currentPassword);
+    if (!ok) {
+      return res.status(401).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Password updated successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
 exports.updateProfile = async (req, res) => {
   try {
@@ -82,7 +183,7 @@ exports.getAllFaculty = async (req, res) => {
   try {
     const { department, search } = req.query;
 
-    let query = { role: 'faculty' };
+    let query = { role: 'faculty'};
 
     if (department) {
       query.department = department;
@@ -351,3 +452,76 @@ exports.getPublicSchedule = async (req, res) => {
     });
   }
 };
+
+exports.getMyNotifications = async (req, res) => {
+  try {
+    const { unreadOnly, page, limit } = req.query;
+
+    const pageNum = Math.max(parseInt(page || '1', 10), 1);
+    const limitNum = Math.min(Math.max(parseInt(limit || '50', 10), 1), 200);
+    const skip = (pageNum - 1) * limitNum;
+
+    const query = { user: req.user._id };
+    if (unreadOnly === 'true' || unreadOnly === true) {
+      query.read = false;
+    }
+
+    const [notifications, total, unreadCount] = await Promise.all([
+      Notification.find(query).sort({ createdAt: -1 }).skip(skip).limit(limitNum).lean(),
+      Notification.countDocuments(query),
+      Notification.countDocuments({ user: req.user._id, read: false }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      notifications,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+      },
+      unreadCount,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+exports.markNotificationRead = async (req, res) => {
+  try {
+    const n = await Notification.findOne({ _id: req.params.id, user: req.user._id });
+    if (!n) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    if (!n.read) {
+      n.read = true;
+      n.readAt = new Date();
+      await n.save();
+    }
+
+    res.status(200).json({ success: true, notification: n });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.markAllNotificationsRead = async (req, res) => {
+  try {
+    const now = new Date();
+    const result = await Notification.updateMany(
+      { user: req.user._id, read: false },
+      { $set: { read: true, readAt: now } }
+    );
+
+    res.status(200).json({
+      success: true,
+      modifiedCount: result.modifiedCount || 0,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+ };

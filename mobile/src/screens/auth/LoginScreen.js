@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -55,6 +56,7 @@ const LoginScreen = ({ navigation, route }) => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
+          <Image source={require('../../../assets/brand-logo.png')} style={styles.logo} resizeMode="contain" />
           <Text style={[styles.title, { color: colors.text }]}>Welcome Back</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Login as {role === 'faculty' ? 'Faculty' : 'Student'}
@@ -138,6 +140,12 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 40,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 180,
+    height: 180,
+    marginBottom: 10,
   },
   title: {
     fontSize: 32,
@@ -146,6 +154,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+    textAlign: 'center',
   },
   form: {
     width: '100%',

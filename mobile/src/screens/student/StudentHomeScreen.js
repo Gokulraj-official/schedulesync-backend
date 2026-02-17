@@ -93,6 +93,9 @@ const StudentHomeScreen = ({ navigation }) => {
             <TouchableOpacity onPress={toggleTheme} style={styles.iconButton}>
               <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color="#ffffff" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('ChatsList')} style={styles.iconButton}>
+              <Ionicons name="chatbubbles-outline" size={24} color="#ffffff" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
               <Ionicons name="log-out-outline" size={24} color="#ffffff" />
             </TouchableOpacity>

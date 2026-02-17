@@ -15,13 +15,16 @@ import { useAuth } from '../../context/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
 import api from '../../config/api';
 import moment from 'moment';
+import { useSocket } from '../../context/SocketContext';
 
 const FacultyHomeScreen = ({ navigation }) => {
   const { colors, isDarkMode, toggleTheme } = useTheme();
   const { user, logout, updateUser } = useAuth();
+  const { socket } = useSocket();
   const [statistics, setStatistics] = useState(null);
   const [todaySlots, setTodaySlots] = useState([]);
   const [pendingBookings, setPendingBookings] = useState([]);
+  const [tomorrowSummary, setTomorrowSummary] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isOnline, setIsOnline] = useState(user?.isOnline || false);
 
@@ -35,19 +38,67 @@ const FacultyHomeScreen = ({ navigation }) => {
     }, [])
   );
 
+  useEffect(() => {
+    if (!socket) return;
+
+    const refresh = () => {
+      loadData();
+    };
+
+    socket.on('booking_created', refresh);
+    socket.on('booking_updated', refresh);
+    socket.on('slot_updated', refresh);
+
+    return () => {
+      socket.off('booking_created', refresh);
+      socket.off('booking_updated', refresh);
+      socket.off('slot_updated', refresh);
+    };
+  }, [socket]);
+
   const loadData = async () => {
     try {
-      const [statsRes, todayRes, bookingsRes] = await Promise.all([
+      const [statsRes, todayRes, bookingsRes, tomorrowRes] = await Promise.all([
         api.get('/users/statistics'),
         api.get('/slots/today'),
         api.get('/bookings/faculty-bookings?status=pending'),
+        api.get('/bookings/faculty-tomorrow-summary'),
       ]);
 
       setStatistics(statsRes.data.statistics);
       setTodaySlots(todayRes.data.slots || []);
       setPendingBookings(bookingsRes.data.bookings || []);
+      setTomorrowSummary(tomorrowRes.data || null);
     } catch (error) {
       console.error('Error loading data:', error);
+    }
+  };
+
+  const sendTomorrowNotice = async () => {
+    try {
+      const count = tomorrowSummary?.count || 0;
+      if (!count) {
+        return Alert.alert('No bookings', 'No approved bookings for tomorrow.');
+      }
+
+      Alert.alert(
+        'Notify Students',
+        `Send a reminder to ${count} student(s) for tomorrow's bookings?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Send',
+            onPress: async () => {
+              await api.post('/bookings/faculty-notify-tomorrow', {
+                message: "You have an appointment scheduled for tomorrow. Please be on time.",
+              });
+              Alert.alert('Sent', 'Reminder sent to students.');
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to notify students');
     }
   };
 
@@ -91,6 +142,9 @@ const FacultyHomeScreen = ({ navigation }) => {
             <TouchableOpacity onPress={toggleTheme} style={styles.iconButton}>
               <Ionicons name={isDarkMode ? 'sunny' : 'moon'} size={24} color="#ffffff" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('ChatsList')} style={styles.iconButton}>
+              <Ionicons name="chatbubbles-outline" size={24} color="#ffffff" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
               <Ionicons name="log-out-outline" size={24} color="#ffffff" />
             </TouchableOpacity>
@@ -109,6 +163,24 @@ const FacultyHomeScreen = ({ navigation }) => {
       </View>
 
       <View style={styles.content}>
+        {!!tomorrowSummary?.count && tomorrowSummary.count >= 3 && (
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tomorrow</Text>
+            </View>
+
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>You have {tomorrowSummary.count} booking(s) tomorrow.</Text>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary, alignSelf: 'flex-start', marginTop: 10 }]}
+              onPress={sendTomorrowNotice}
+            >
+              <Ionicons name="notifications-outline" size={20} color="#ffffff" />
+              <Text style={styles.actionButtonText}>Notify All Students</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: colors.card }]}>
             <Ionicons name="calendar" size={30} color={colors.primary} />
@@ -222,7 +294,7 @@ const FacultyHomeScreen = ({ navigation }) => {
         <View style={styles.quickActions}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Slots', { screen: 'CreateSlot' })}
+            onPress={() => navigation.navigate('Slots', { screen: 'SlotManagement', params: { openCreate: true } })}
           >
             <Ionicons name="add-circle-outline" size={24} color="#ffffff" />
             <Text style={styles.actionButtonText}>Create Slot</Text>

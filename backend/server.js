@@ -55,7 +55,8 @@ app.get('/', (req, res) => {
     success: true,
     message: 'ScheduleSync API is running',
     version: '2.0.0',
-    features: ['Socket.io', 'Push Notifications', 'Chat', 'Waitlist', 'Admin Panel']
+    features: ['Socket.io', 'Push Notifications', 'Chat', 'Waitlist', 'Admin Panel'],
+    status: 'deployed'
   });
 });
 

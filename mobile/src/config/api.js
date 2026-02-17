@@ -30,7 +30,7 @@ const devHostIp = getDevHostIp();
 const API_URL =
   configuredApiUrlFromEnv ||
   configuredApiUrl ||
-  (__DEV__ && devHostIp ? `http://${devHostIp}:5000/api` : 'https://schedulesync-backend.onrender.com/api');
+  (__DEV__ && devHostIp ? `http://${devHostIp}:5000/api` : 'https://schedulesync-api.onrender.com/api');
 
 
 const api = axios.create({

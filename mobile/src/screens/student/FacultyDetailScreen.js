@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../config/api';
 
 const FacultyDetailScreen = ({ navigation, route }) => {
   const { colors } = useTheme();
+  const { socket } = useSocket();
   const { facultyId } = route.params;
   const [faculty, setFaculty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -24,6 +26,33 @@ const FacultyDetailScreen = ({ navigation, route }) => {
     loadFaculty();
     checkFavorite();
   }, []);
+
+  // Listen for real-time online/offline changes
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUserOnline = (data) => {
+      if (data.userId === facultyId) {
+        console.log('🟢 Faculty came online');
+        setFaculty(prev => prev ? { ...prev, isOnline: true } : null);
+      }
+    };
+
+    const handleUserOffline = (data) => {
+      if (data.userId === facultyId) {
+        console.log('🔴 Faculty went offline');
+        setFaculty(prev => prev ? { ...prev, isOnline: false } : null);
+      }
+    };
+
+    socket.on('user_online', handleUserOnline);
+    socket.on('user_offline', handleUserOffline);
+
+    return () => {
+      socket.off('user_online', handleUserOnline);
+      socket.off('user_offline', handleUserOffline);
+    };
+  }, [socket, facultyId]);
 
   const loadFaculty = async () => {
     try {

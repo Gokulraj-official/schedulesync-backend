@@ -1,10 +1,12 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { LogBox } from 'react-native';
+import { LogBox, View } from 'react-native';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
+import { ChatBotWidgetProvider } from './src/context/ChatBotWidgetContext';
+import ChatBotWidget from './src/components/ChatBotWidget';
 import AuthNavigator from './src/navigation/AuthNavigator';
 import FacultyNavigator from './src/navigation/FacultyNavigator';
 import StudentNavigator from './src/navigation/StudentNavigator';
@@ -15,7 +17,7 @@ LogBox.ignoreLogs(['Non-serializable values were found in the navigation state']
 
 const Stack = createStackNavigator();
 
-function AppNavigator() {
+function AppContent() {
   const { user, token, loading } = useAuth();
 
   if (loading) {
@@ -66,12 +68,23 @@ function AppNavigator() {
   );
 }
 
+function AppNavigator() {
+  return (
+    <View style={{ flex: 1 }}>
+      <AppContent />
+      <ChatBotWidget />
+    </View>
+  );
+}
+
 export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <SocketProvider>
-          <AppNavigator />
+          <ChatBotWidgetProvider>
+            <AppNavigator />
+          </ChatBotWidgetProvider>
         </SocketProvider>
       </AuthProvider>
     </ThemeProvider>

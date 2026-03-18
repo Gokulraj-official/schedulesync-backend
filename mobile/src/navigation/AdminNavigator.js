@@ -16,6 +16,7 @@ import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
 import AdminAccountScreen from '../screens/admin/AdminAccountScreen';
 import EditAdminProfileScreen from '../screens/admin/EditAdminProfileScreen';
 import ChangePasswordScreen from '../screens/shared/ChangePasswordScreen';
+import ChatBotScreen from '../screens/shared/ChatBotScreen';
 
 const Stack = createStackNavigator();
 
@@ -64,6 +65,7 @@ const AdminNavigator = () => {
       <Stack.Screen name="AdminAccount" component={AdminAccountScreen} options={{ title: 'Account' }} />
       <Stack.Screen name="EditAdminProfile" component={EditAdminProfileScreen} options={{ title: 'Edit Profile' }} />
       <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ title: 'Change Password' }} />
+      <Stack.Screen name="ChatBot" component={ChatBotScreen} options={{ title: 'Support' }} />
     </Stack.Navigator>
   );
 };

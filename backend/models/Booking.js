@@ -69,6 +69,30 @@ const bookingSchema = new mongoose.Schema({
     default: false
   },
   promotedAt: Date,
+  // Reminder tracking
+  reminders: {
+    reminderEnabled: {
+      type: Boolean,
+      default: true
+    },
+    sent24HoursBefore: {
+      type: Boolean,
+      default: false
+    },
+    sentAt24HoursBefore: Date,
+    sent1HourBefore: {
+      type: Boolean,
+      default: false
+    },
+    sentAt1HourBefore: Date,
+    sentDayOf: {
+      type: Boolean,
+      default: false
+    },
+    sentAtDayOf: Date,
+    lastReminderSent: Date,
+    reminderNotes: String
+  },
   createdAt: {
     type: Date,
     default: Date.now

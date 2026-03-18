@@ -1,6 +1,7 @@
 const Booking = require('../models/Booking');
 const Notification = require('../models/Notification');
 const NotificationService = require('./notificationService');
+const ReminderPreference = require('../models/ReminderPreference');
 
 let ioRef = null;
 
@@ -168,6 +169,298 @@ const processFacultyLoadSuggestions = async () => {
   }
 };
 
+// New: Process 24-hour before reminders
+const process24HourReminders = async () => {
+  const now = new Date();
+  const in24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const in24HoursPlus5Min = new Date(in24Hours.getTime() + 5 * 60 * 1000);
+
+  const bookings = await Booking.find({
+    status: 'approved',
+    'reminders.sent24HoursBefore': false,
+  })
+    .populate({
+      path: 'slot',
+      match: {
+        startTime: { $gte: in24Hours, $lt: in24HoursPlus5Min },
+      },
+      select: 'startTime endTime',
+    })
+    .populate('student', '_id name email')
+    .populate('faculty', 'name')
+    .select('_id student faculty slot reminders');
+
+  for (const booking of bookings) {
+    if (!booking?.slot) continue;
+
+    const studentId = booking?.student?._id;
+    if (!studentId) continue;
+
+    // Check user's reminder preferences
+    let prefs = await ReminderPreference.findOne({ user: studentId });
+    if (!prefs?.remindersEnabled || !prefs?.reminder24HoursBefore) {
+      continue;
+    }
+
+    // Ensure reminders subdocument exists with proper structure
+    if (!booking.reminders) {
+      booking.reminders = {
+        reminderEnabled: true,
+        sent24HoursBefore: false,
+        sent1HourBefore: false,
+        sentDayOf: false
+      };
+    }
+
+    // Skip if already sent
+    if (booking.reminders?.sent24HoursBefore) {
+      continue;
+    }
+
+    // Send reminder notification
+    const title = `Reminder: Appointment Tomorrow`;
+    const body = `Your booking with ${booking.faculty?.name} is scheduled for tomorrow at ${new Date(
+      booking.slot.startTime
+    ).toLocaleTimeString()}`;
+
+    await NotificationService.createNotification(studentId, 'reminder_24hour', title, body, {
+      bookingId: booking._id.toString(),
+      facultyName: booking.faculty?.name,
+      slotTime: booking.slot.startTime.toISOString(),
+    });
+
+    // Send push notification if enabled
+    if (prefs.notificationMethods?.pushNotification) {
+      await NotificationService.sendPushNotification(studentId, title, body, {
+        type: 'reminder_24hour',
+        bookingId: booking._id.toString(),
+      });
+    }
+
+    // Emit socket event for real-time notification
+    if (ioRef) {
+      ioRef.to(studentId.toString()).emit('reminder', {
+        type: 'reminder_24hour',
+        bookingId: booking._id.toString(),
+        title,
+        body,
+        slotTime: booking.slot.startTime,
+      });
+    }
+
+    // Update booking reminder status
+    await Booking.updateOne(
+      { _id: booking._id },
+      {
+        $set: {
+          'reminders.sent24HoursBefore': true,
+          'reminders.sentAt24HoursBefore': now,
+        },
+      }
+    );
+
+    console.log(`[ReminderScheduler] 24-hour reminder sent for booking ${booking._id} to student ${studentId}`);
+  }
+};
+
+// New: Process 1-hour before reminders
+const process1HourReminders = async () => {
+  const now = new Date();
+  const in1Hour = new Date(now.getTime() + 60 * 60 * 1000);
+  const in1HourPlus5Min = new Date(in1Hour.getTime() + 5 * 60 * 1000);
+
+  const bookings = await Booking.find({
+    status: 'approved',
+    'reminders.sent1HourBefore': false,
+  })
+    .populate({
+      path: 'slot',
+      match: {
+        startTime: { $gte: in1Hour, $lt: in1HourPlus5Min },
+      },
+      select: 'startTime endTime',
+    })
+    .populate('student', '_id name email')
+    .populate('faculty', 'name')
+    .select('_id student faculty slot reminders');
+
+  for (const booking of bookings) {
+    if (!booking?.slot) continue;
+
+    const studentId = booking?.student?._id;
+    if (!studentId) continue;
+
+    // Check user's reminder preferences
+    let prefs = await ReminderPreference.findOne({ user: studentId });
+    if (!prefs?.remindersEnabled || !prefs?.reminder1HourBefore) {
+      continue;
+    }
+
+    // Ensure reminders subdocument exists with proper structure
+    if (!booking.reminders) {
+      booking.reminders = {
+        reminderEnabled: true,
+        sent24HoursBefore: false,
+        sent1HourBefore: false,
+        sentDayOf: false
+      };
+    }
+
+    // Skip if already sent
+    if (booking.reminders?.sent1HourBefore) {
+      continue;
+    }
+
+    // Send reminder notification
+    const title = `Appointment in 1 Hour`;
+    const body = `Your booking with ${booking.faculty?.name} starts in 1 hour at ${new Date(
+      booking.slot.startTime
+    ).toLocaleTimeString()}`;
+
+    await NotificationService.createNotification(studentId, 'reminder_1hour', title, body, {
+      bookingId: booking._id.toString(),
+      facultyName: booking.faculty?.name,
+      slotTime: booking.slot.startTime.toISOString(),
+    });
+
+    // Send push notification if enabled
+    if (prefs.notificationMethods?.pushNotification) {
+      await NotificationService.sendPushNotification(studentId, title, body, {
+        type: 'reminder_1hour',
+        bookingId: booking._id.toString(),
+      });
+    }
+
+    // Emit socket event for real-time notification
+    if (ioRef) {
+      ioRef.to(studentId.toString()).emit('reminder', {
+        type: 'reminder_1hour',
+        bookingId: booking._id.toString(),
+        title,
+        body,
+        slotTime: booking.slot.startTime,
+      });
+    }
+
+    // Update booking reminder status
+    await Booking.updateOne(
+      { _id: booking._id },
+      {
+        $set: {
+          'reminders.sent1HourBefore': true,
+          'reminders.sentAt1HourBefore': now,
+        },
+      }
+    );
+
+    console.log(`[ReminderScheduler] 1-hour reminder sent for booking ${booking._id} to student ${studentId}`);
+  }
+};
+
+// New: Process day-of reminders
+const processDayOfReminders = async () => {
+  const now = new Date();
+  const todayStart = startOfDay(now);
+  const todayEnd = startOfDay(addDays(now, 1));
+
+  const bookings = await Booking.find({
+    status: 'approved',
+    'reminders.sentDayOf': false,
+  })
+    .populate({
+      path: 'slot',
+      match: {
+        startTime: { $gte: todayStart, $lt: todayEnd },
+      },
+      select: 'startTime endTime',
+    })
+    .populate('student', '_id name email')
+    .populate('faculty', 'name')
+    .select('_id student faculty slot reminders');
+
+  for (const booking of bookings) {
+    if (!booking?.slot) continue;
+
+    const studentId = booking?.student?._id;
+    if (!studentId) continue;
+
+    // Check user's reminder preferences
+    let prefs = await ReminderPreference.findOne({ user: studentId });
+    if (!prefs?.remindersEnabled || !prefs?.reminderDayOf) {
+      continue;
+    }
+
+    // Ensure reminders subdocument exists with proper structure
+    if (!booking.reminders) {
+      booking.reminders = {
+        reminderEnabled: true,
+        sent24HoursBefore: false,
+        sent1HourBefore: false,
+        sentDayOf: false
+      };
+    }
+
+    // Skip if already sent
+    if (booking.reminders?.sentDayOf) {
+      continue;
+    }
+
+    // Get the day-of reminder time (default: 9:00 AM in user's timezone)
+    const reminderTimeStr = prefs.dayOfReminderTime || '09:00';
+    const [hours, minutes] = reminderTimeStr.split(':').map(Number);
+
+    const reminderTime = new Date(todayStart);
+    reminderTime.setHours(hours, minutes, 0, 0);
+
+    // Check if we're past the reminder time but before the slot starts
+    if (now >= reminderTime && now < booking.slot.startTime) {
+      // Send day-of reminder
+      const title = `Your Appointment Today`;
+      const body = `Reminder: Your booking with ${booking.faculty?.name} is today at ${new Date(
+        booking.slot.startTime
+      ).toLocaleTimeString()}`;
+
+      await NotificationService.createNotification(studentId, 'reminder_dayof', title, body, {
+        bookingId: booking._id.toString(),
+        facultyName: booking.faculty?.name,
+        slotTime: booking.slot.startTime.toISOString(),
+      });
+
+      // Send push notification if enabled
+      if (prefs.notificationMethods?.pushNotification) {
+        await NotificationService.sendPushNotification(studentId, title, body, {
+          type: 'reminder_dayof',
+          bookingId: booking._id.toString(),
+        });
+      }
+
+      // Emit socket event for real-time notification
+      if (ioRef) {
+        ioRef.to(studentId.toString()).emit('reminder', {
+          type: 'reminder_dayof',
+          bookingId: booking._id.toString(),
+          title,
+          body,
+          slotTime: booking.slot.startTime,
+        });
+      }
+
+      // Update booking reminder status
+      await Booking.updateOne(
+        { _id: booking._id },
+        {
+          $set: {
+            'reminders.sentDayOf': true,
+            'reminders.sentAtDayOf': now,
+          },
+        }
+      );
+
+      console.log(`[ReminderScheduler] Day-of reminder sent for booking ${booking._id} to student ${studentId}`);
+    }
+  }
+};
+
 const safeRun = async (fn, label) => {
   try {
     await fn();
@@ -182,15 +475,23 @@ const startReminderScheduler = () => {
   if (started) return;
   started = true;
 
+  // Run every 5 minutes to check for due reminders
   setInterval(() => {
     safeRun(processSmartReminders, 'processSmartReminders');
+    safeRun(process24HourReminders, 'process24HourReminders');
+    safeRun(process1HourReminders, 'process1HourReminders');
+    safeRun(processDayOfReminders, 'processDayOfReminders');
     safeRun(processFacultyLoadSuggestions, 'processFacultyLoadSuggestions');
-  }, 60 * 1000);
+  }, 5 * 60 * 1000);
 
+  // Run immediately on startup
   safeRun(processSmartReminders, 'processSmartReminders');
+  safeRun(process24HourReminders, 'process24HourReminders');
+  safeRun(process1HourReminders, 'process1HourReminders');
+  safeRun(processDayOfReminders, 'processDayOfReminders');
   safeRun(processFacultyLoadSuggestions, 'processFacultyLoadSuggestions');
 
-  console.log('ReminderScheduler started');
+  console.log('[ReminderScheduler] Started - checking reminders every 5 minutes');
 };
 
 const startReminderSchedulerWithIo = (io) => {

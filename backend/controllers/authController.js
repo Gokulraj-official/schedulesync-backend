@@ -109,19 +109,25 @@ exports.login = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    await User.findByIdAndUpdate(req.user._id, {
-      isOnline: false,
-      lastSeen: new Date()
-    });
+    // If user is authenticated, update their online status
+    if (req.user && req.user._id) {
+      await User.findByIdAndUpdate(req.user._id, {
+        isOnline: false,
+        lastSeen: new Date()
+      });
+      console.log(`[Auth] User ${req.user._id} logged out`);
+    }
 
     res.status(200).json({
       success: true,
       message: 'Logged out successfully'
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
+    console.error('[Auth] Logout error:', error.message);
+    // Still return success even if database update fails
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
     });
   }
 };

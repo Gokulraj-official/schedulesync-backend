@@ -36,6 +36,7 @@
       "favicon": "./assets/icon.png"
     },
     "extra": {
+      "apiUrl": "https://schedulesync-api.onrender.com/api",
       "eas": {
         "projectId": "61d08eea-2758-49b1-b5a6-70069251c590"
       }

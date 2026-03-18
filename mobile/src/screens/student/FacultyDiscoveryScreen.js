@@ -12,10 +12,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import { useTheme } from '../../context/ThemeContext';
+import { useSocket } from '../../context/SocketContext';
 import api from '../../config/api';
 
 const FacultyDiscoveryScreen = ({ navigation }) => {
   const { colors } = useTheme();
+  const { socket, onlineUsers } = useSocket();
   const [faculty, setFaculty] = useState([]);
   const [filteredFaculty, setFilteredFaculty] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,9 +42,40 @@ const FacultyDiscoveryScreen = ({ navigation }) => {
     loadFaculty();
   }, []);
 
+  // Listen for online/offline changes and refresh faculty list
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUserOnline = (data) => {
+      console.log('🟢 Refreshing faculty list - user came online');
+      setFaculty(prev => 
+        prev.map(f => 
+          f._id === data.userId ? { ...f, isOnline: true } : f
+        )
+      );
+    };
+
+    const handleUserOffline = (data) => {
+      console.log('🔴 Refreshing faculty list - user went offline');
+      setFaculty(prev => 
+        prev.map(f => 
+          f._id === data.userId ? { ...f, isOnline: false } : f
+        )
+      );
+    };
+
+    socket.on('user_online', handleUserOnline);
+    socket.on('user_offline', handleUserOffline);
+
+    return () => {
+      socket.off('user_online', handleUserOnline);
+      socket.off('user_offline', handleUserOffline);
+    };
+  }, [socket]);
+
   useEffect(() => {
     filterFaculty();
-  }, [searchQuery, selectedDepartment, faculty]);
+  }, [searchQuery, selectedDepartment, faculty, onlineUsers]);
 
   const loadFaculty = async () => {
     try {

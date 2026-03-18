@@ -19,6 +19,7 @@ import NotificationDetailScreen from '../screens/shared/NotificationDetailScreen
 import ChatsListScreen from '../screens/shared/ChatsListScreen';
 import NewChatScreen from '../screens/shared/NewChatScreen';
 import DirectChatScreen from '../screens/shared/DirectChatScreen';
+import ChatBotScreen from '../screens/shared/ChatBotScreen';
 import PublicScheduleScreen from '../screens/faculty/PublicScheduleScreen';
 import CalendarViewScreen from '../screens/faculty/CalendarViewScreen';
 
@@ -30,6 +31,7 @@ const HomeStack = () => (
     <Stack.Screen name="FacultyHome" component={FacultyHomeScreen} options={{ headerShown: false }} />
     <Stack.Screen name="CalendarView" component={CalendarViewScreen} options={{ title: 'Calendar' }} />
     <Stack.Screen name="ChatsList" component={ChatsListScreen} options={{ title: 'Chats' }} />
+    <Stack.Screen name="ChatBot" component={ChatBotScreen} options={{ title: 'Support' }} />
     <Stack.Screen name="NewChat" component={NewChatScreen} options={{ title: 'New Chat' }} />
     <Stack.Screen name="DirectChat" component={DirectChatScreen} options={{ title: 'Chat' }} />
   </Stack.Navigator>

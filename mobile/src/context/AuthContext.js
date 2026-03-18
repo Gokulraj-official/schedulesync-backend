@@ -98,11 +98,29 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
+      // Get current token before clearing it
+      const currentToken = await AsyncStorage.getItem('userToken');
+      
+      if (currentToken) {
+        // Make logout API call with current token
+        await api.post('/auth/logout', {}, {
+          headers: {
+            Authorization: `Bearer ${currentToken}`
+          }
+        });
+      }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Logout API error:', error.message);
+      // Continue with logout even if API call fails
     } finally {
-      await AsyncStorage.multiRemove(['userToken', 'userData', 'userRole', 'pushToken']);
+      try {
+        // Clear all stored data
+        await AsyncStorage.multiRemove(['userToken', 'userData', 'userRole', 'pushToken']);
+      } catch (storageError) {
+        console.error('Error clearing AsyncStorage:', storageError);
+      }
+      
+      // Clear auth state - this will trigger Socket disconnection
       setToken(null);
       setUser(null);
     }

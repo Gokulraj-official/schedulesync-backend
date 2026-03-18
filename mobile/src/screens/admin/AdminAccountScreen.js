@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,26 @@ import { useAuth } from '../../context/AuthContext';
 const AdminAccountScreen = ({ navigation }) => {
   const { colors } = useTheme();
   const { user, logout } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', onPress: logout, style: 'destructive' },
+      {
+        text: 'Logout',
+        onPress: async () => {
+          try {
+            setIsLoggingOut(true);
+            await logout();
+          } catch (error) {
+            console.error('Logout error:', error);
+            Alert.alert('Logout Error', 'Failed to logout. Please try again.');
+          } finally {
+            setIsLoggingOut(false);
+          }
+        },
+        style: 'destructive',
+      },
     ]);
   };
 
